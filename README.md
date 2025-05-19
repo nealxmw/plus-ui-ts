@@ -7,7 +7,7 @@
 - [RuoYi-Cloud-Plus 2.X(注意版本号)](https://gitee.com/dromara/RuoYi-Cloud-Plus)
 
 ## 前端运行
-测试
+
 ```bash
 # 克隆项目
 git clone https://gitee.com/JavaLionLi/plus-ui.git
