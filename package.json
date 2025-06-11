@@ -27,6 +27,7 @@
     "animate.css": "4.1.1",
     "await-to-js": "3.0.0",
     "axios": "1.7.8",
+    "clipboard": "^2.0.11",
     "crypto-js": "4.2.0",
     "diagram-js": "12.3.0",
     "didi": "9.0.2",
@@ -36,6 +37,7 @@
     "fuse.js": "7.0.0",
     "highlight.js": "11.9.0",
     "image-conversion": "2.1.1",
+    "js-beautify": "^1.15.4",
     "js-cookie": "3.0.5",
     "jsencrypt": "3.3.2",
     "nprogress": "0.2.0",
@@ -47,6 +49,7 @@
     "vue-json-pretty": "2.4.0",
     "vue-router": "4.4.5",
     "vue-types": "5.1.3",
+    "vuedraggable": "^4.1.0",
     "vxe-table": "4.5.22"
   },
   "devDependencies": {

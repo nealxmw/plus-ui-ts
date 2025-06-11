@@ -113,9 +113,9 @@
 </template>
 
 <script setup name="Gen" lang="ts">
-import {delTable, genCode, getDataNames, listTable, previewTable, synchDb} from '@/api/tool/gen';
-import {TableQuery, TableVO} from '@/api/tool/gen/types';
-import router from '@/router';
+import { delTable, genCode, getDataNames, listTable, previewTable, synchDb } from '@/api/tool/gen/index';
+import { TableQuery, TableVO } from '@/api/tool/gen/types';
+import router from '@/router/index';
 import ImportTable from './importTable.vue';
 
 const route = useRoute();

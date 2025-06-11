@@ -3,29 +3,48 @@
     "target": "esnext",
     "module": "esnext",
     //    "useDefineForClassFields": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "strict": true,
     "jsx": "preserve",
+    "jsxFactory": "h",
     "strictNullChecks": false,
     "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "strictFunctionTypes": false,
-    "lib": ["esnext", "dom"],
+    "lib": [
+      "esnext",
+      "dom"
+    ],
     "noImplicitAny": false,
     "baseUrl": ".",
     "allowJs": true,
     "experimentalDecorators": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     },
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "skipLibCheck": true,
     "removeComments": true,
     // 允许默认导入
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "src/types/**/*.d.ts", "vite.config.ts"],
-  "exclude": ["node_modules", "dist", "**/*.js", "**/*.md", "src/**/*.md"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "src/types/**/*.d.ts",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.js",
+    "**/*.md",
+    "src/**/*.md"
+  ]
 }
