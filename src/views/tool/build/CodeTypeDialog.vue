@@ -13,7 +13,7 @@
     </template>
 
     <el-row :gutter="15">
-      <el-form ref="formRef" :model="formData" :rules="rules" size="medium" label-width="100px">
+      <el-form ref="formRef" :model="formData" :rules="rules" size="default" label-width="100px">
         <el-col :span="24">
           <el-form-item label="生成类型" prop="type">
             <el-radio-group v-model="formData.type">

@@ -1,7 +1,6 @@
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, SetupContext, VNode } from 'vue';
 import { makeMap } from '@/utils/generator/index';
 
-// 参考 https://github.com/vuejs/vue/blob/v2.6.10/src/platforms/web/server/util.js
 const isAttr = makeMap(
   'accept,accept-charset,accesskey,action,align,alt,async,autocomplete,' +
     'autofocus,autoplay,autosave,bgcolor,border,buffered,challenge,charset,' +
@@ -18,54 +17,25 @@ const isAttr = makeMap(
     'target,title,type,usemap,value,width,wrap'
 );
 
-interface Option {
-  label: string;
-  value: any;
-  disabled?: boolean;
-}
-
-interface ComponentConfig {
-  tag: string;
-  [key: string]: any;
-  vModel?: boolean;
-  defaultValue?: any;
-  options?: Option[];
-  optionType?: string;
-  border?: boolean;
-  'list-type'?: string;
-  buttonText?: string;
-  showTip?: boolean;
-  fileSize?: number;
-  sizeUnit?: string;
-  accept?: string;
-}
-
-function vModel(dataObject: Record<string, any>, defaultValue: any) {
-  dataObject['modelValue'] = defaultValue;
-
-  dataObject['onUpdate:modelValue'] = (val: any) => {
-    return val;
-  };
-}
-
-const componentChild = {
+// 预定义特殊子插槽渲染函数
+const componentChild: Record<string, Record<string, (h: typeof import('vue').h, conf: any, key: string) => VNode | VNode[]>> = {
   'el-button': {
-    default: (conf: ComponentConfig, key: string) => {
+    default(h, conf, key) {
       return conf[key];
     }
   },
   'el-input': {
-    prepend: (conf: ComponentConfig, key: string) => {
-      return h('template', { slot: 'prepend' }, conf[key]);
+    prepend(h, conf, key) {
+      return h('template', { slot: 'prepend' }, () => conf[key]);
     },
-    append: (conf: ComponentConfig, key: string) => {
-      return h('template', { slot: 'append' }, conf[key]);
+    append(h, conf, key) {
+      return h('template', { slot: 'append' }, () => conf[key]);
     }
   },
   'el-select': {
-    options: (conf: ComponentConfig) => {
-      if (!conf.options) return [];
-      return conf.options.map((item) =>
+    options(h, conf, key) {
+      if (!conf.options || !Array.isArray(conf.options)) return [];
+      return conf.options.map((item: any) =>
         h('el-option', {
           label: item.label,
           value: item.value,
@@ -75,51 +45,32 @@ const componentChild = {
     }
   },
   'el-radio-group': {
-    options: (conf: ComponentConfig) => {
-      if (!conf.options) return [];
-      return conf.options.map((item) => {
-        if (conf.optionType === 'button') {
-          return h('el-radio-button', { label: item.value }, item.label);
-        } else {
-          return h(
-            'el-radio',
-            {
-              label: item.value,
-              border: conf.border
-            },
-            item.label
-          );
-        }
-      });
+    options(h, conf, key) {
+      if (!conf.options || !Array.isArray(conf.options)) return [];
+      return conf.options.map((item: any) =>
+        conf.optionType === 'button'
+          ? h('el-radio-button', { label: item.value }, () => item.label)
+          : h('el-radio', { label: item.value, border: conf.border }, () => item.label)
+      );
     }
   },
   'el-checkbox-group': {
-    options: (conf: ComponentConfig) => {
-      if (!conf.options) return [];
-      return conf.options.map((item) => {
-        if (conf.optionType === 'button') {
-          return h('el-checkbox-button', { label: item.value }, item.label);
-        } else {
-          return h(
-            'el-checkbox',
-            {
-              label: item.value,
-              border: conf.border
-            },
-            item.label
-          );
-        }
-      });
+    options(h, conf, key) {
+      if (!conf.options || !Array.isArray(conf.options)) return [];
+      return conf.options.map((item: any) =>
+        conf.optionType === 'button'
+          ? h('el-checkbox-button', { label: item.value }, () => item.label)
+          : h('el-checkbox', { label: item.value, border: conf.border }, () => item.label)
+      );
     }
   },
   'el-upload': {
-    'list-type': (conf: ComponentConfig) => {
-      const list = [];
-
+    'list-type': (h, conf, key) => {
+      const children = [];
       if (conf['list-type'] === 'picture-card') {
-        list.push(h('i', { class: 'el-icon-plus' }));
+        children.push(h('i', { class: 'el-icon-plus' }));
       } else {
-        list.push(
+        children.push(
           h(
             'el-button',
             {
@@ -127,74 +78,77 @@ const componentChild = {
               type: 'primary',
               icon: 'el-icon-upload'
             },
-            conf.buttonText || '上传'
+            () => conf.buttonText
           )
         );
       }
-
       if (conf.showTip) {
-        list.push(
-          h('div', { slot: 'tip', class: 'el-upload__tip' }, `只能上传不超过 ${conf.fileSize || ''}${conf.sizeUnit || ''} 的${conf.accept || ''}文件`)
+        children.push(
+          h(
+            'div',
+            { class: 'el-upload__tip', slot: 'tip' },
+            `只能上传不超过 ${conf.fileSize}${conf.sizeUnit} 的${conf.accept}文件`
+          )
         );
       }
-
-      return list;
+      return children;
     }
   }
 };
 
 export default defineComponent({
-  name: 'DynamicRender',
-
+  name: 'RenderComponent',
   props: {
     conf: {
-      type: Object as () => ComponentConfig,
+      type: Object,
       required: true
     }
   },
-
-  setup(props, { emit }) {
+  emits: ['update:modelValue'],
+  setup(props, ctx: SetupContext) {
     return () => {
-      const dataObject: Record<string, any> = {
-        attrs: {},
-        props: {},
-        on: {},
-        style: {}
-      };
+      const conf = props.conf;
+      const children: VNode[] = [];
 
-      const confClone = JSON.parse(JSON.stringify(props.conf)) as ComponentConfig;
-      const children: any[] = [];
-
-      // 处理特定组件的子元素
-      const childObjs = componentChild[confClone.tag as keyof typeof componentChild];
-      if (childObjs) {
-        Object.keys(childObjs).forEach((key) => {
-          const childFunc = childObjs[key as keyof typeof childObjs];
-          if (confClone[key]) {
-            children.push(childFunc(confClone, key));
+      // 渲染子插槽或子节点
+      const childFuncs = componentChild[conf.tag];
+      if (childFuncs) {
+        Object.keys(childFuncs).forEach((slotName) => {
+          if (conf[slotName]) {
+            const child = childFuncs[slotName](h, conf, slotName);
+            if (Array.isArray(child)) {
+              children.push(...child);
+            } else {
+              children.push(child);
+            }
           }
         });
       }
 
-      // 处理组件属性
-      Object.keys(confClone).forEach((key) => {
-        const val = confClone[key];
+      // 整合所有属性和事件（class/style/modelValue/onUpdate:modelValue等）
+      const dataObject: Record<string, any> = {};
 
+      Object.keys(conf).forEach((key) => {
+        const val = conf[key];
         if (key === 'vModel') {
-          vModel(dataObject, confClone.defaultValue);
-        } else if (key === 'on') {
-          // 合并事件处理
-          Object.assign(dataObject.on, val);
-        } else if (dataObject[key]) {
+          // v-model 处理
+          dataObject.modelValue = conf.defaultValue;
+          dataObject['onUpdate:modelValue'] = (value: any) => {
+            ctx.emit('update:modelValue', value);
+          };
+        } else if (isAttr(key)) {
+          // 作为 DOM 属性直接设置
           dataObject[key] = val;
-        } else if (!isAttr(key)) {
-          dataObject.props[key] = val;
+        } else if (key === 'tag' || key === 'options') {
+          // 忽略这些内部控制字段，不传给组件
         } else {
-          dataObject.attrs[key] = val;
+          // 其他作为 props
+          dataObject[key] = val;
         }
       });
 
-      return h(confClone.tag, dataObject, children);
+      // 返回渲染节点
+      return h(conf.tag, dataObject, children.length ? children : conf.children || []);
     };
   }
 });

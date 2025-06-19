@@ -1,5 +1,4 @@
 import { UserConfig, ConfigEnv, loadEnv, defineConfig } from 'vite';
-
 import createPlugins from './vite/plugins';
 
 import path from 'path';
@@ -13,7 +12,8 @@ export default defineConfig(({ mode, command }: ConfigEnv): UserConfig => {
     resolve: {
       alias: {
         '~': path.resolve(__dirname, './'),
-        '@': path.resolve(__dirname, './src')
+        '@': path.resolve(__dirname, './src'),
+        'vue': 'vue/dist/vue.esm-bundler.js' // 带编译器的完整版
       },
       extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue']
     },

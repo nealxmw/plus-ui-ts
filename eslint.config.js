@@ -66,6 +66,16 @@ export default [
     },
     plugins: { prettier },
     rules: {
+      'vue/max-len': [
+        'warn',
+        {
+          code: 100,
+          template: 100,
+          tabWidth: 2,
+          ignoreHtmlAttributeValues: true,
+          ignoreHtmlTextContents: true
+        }
+      ],
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',

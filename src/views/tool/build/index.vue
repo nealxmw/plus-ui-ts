@@ -16,7 +16,7 @@
             draggable=".components-item"
             :sort="false"
             @end="onEnd"
-            itemKey="formId"
+            itemKey="renderKey"
           >
             <template #item="{ element, index }">
               <div class="components-item" @click="() => addComponent(element)" :key="index">
@@ -37,7 +37,7 @@
             draggable=".components-item"
             :sort="false"
             @end="onEnd"
-            itemKey="formId"
+            itemKey="renderKey"
           >
             <template #item="{ element, index }">
               <div class="components-item" @click="() => addComponent(element)" :key="index">
@@ -58,7 +58,7 @@
             draggable=".components-item"
             :sort="false"
             @end="onEnd"
-            itemKey="formId"
+            itemKey="renderKey"
           >
             <template #item="{ element, index }">
               <div class="components-item" @click="() => addComponent(element)" :key="index">
@@ -76,8 +76,10 @@
     <div class="center-board">
       <div class="action-bar">
         <el-button link type="primary" icon="Download" @click="download"> 导出vue文件 </el-button>
-        <el-button link type="primary" icon="Copy" @click="copy"> 复制代码 </el-button>
-        <el-button class="delete-btn" link type="danger" icon="Delete" @click="empty"> 清空 </el-button>
+        <el-button link type="primary" icon="DocumentCopy" @click="copy"> 复制代码 </el-button>
+        <el-button class="delete-btn" link type="danger" icon="Delete" @click="empty">
+          清空
+        </el-button>
       </div>
 
       <el-scrollbar class="center-scrollbar">
@@ -88,46 +90,68 @@
             :disabled="formConf.disabled"
             :label-width="formConf.labelWidth + 'px'"
           >
-            <draggable class="drawing-board" :list="drawingList" :animation="340" group="componentsGroup" itemKey="formId">
+            <draggable
+              class="drawing-board"
+              :list="drawingList"
+              :animation="340"
+              group="componentsGroup"
+              itemKey="renderKey"
+            >
               <template #item="{ element, index }">
                 <draggable-item
                   :drawing-list="drawingList"
                   :element="element"
+                  :key="element.renderKey"
                   :index="index"
                   :active-id="activeId"
                   :form-conf="formConf"
                   @activeItem="activeFormItem"
                   @copyItem="drawingItemCopy"
                   @deleteItem="drawingItemDelete"
-                  :key="element.renderKey"
                 />
               </template>
             </draggable>
 
-            <div v-show="!drawingList.length" class="empty-info">从左侧拖入或点选组件进行表单设计</div>
+            <div v-show="!drawingList.length" class="empty-info">
+              从左侧拖入或点选组件进行表单设计
+            </div>
           </el-form>
         </el-row>
       </el-scrollbar>
     </div>
 
-    <right-panel :active-data="activeData" :form-conf="formConf" :show-field="!!drawingList.length" @tag-change="tagChange" />
+    <right-panel
+      :active-data="activeData"
+      :form-conf="formConf"
+      :show-field="!!drawingList.length"
+      @tag-change="tagChange"
+    />
 
-    <code-type-dialog v-model:visible="dialogVisible" title="选择生成类型" :show-file-name="showFileName" @confirm="generate" />
+    <code-type-dialog
+      v-model:visible="dialogVisible"
+      title="选择生成类型"
+      :show-file-name="showFileName"
+      @confirm="generate"
+    />
     <input id="copyNode" type="hidden" />
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, watch, onMounted, nextTick } from 'vue';
 import draggable from 'vuedraggable';
 import beautifier from 'js-beautify';
 import ClipboardJS from 'clipboard';
-import render from '@/utils/generator/render';
 import RightPanel from './RightPanel.vue';
 import CodeTypeDialog from './CodeTypeDialog.vue';
 import DraggableItem from './DraggableItem.vue';
 
-import { inputComponents, selectComponents, layoutComponents, formConf } from '@/utils/generator/config';
+import {
+  inputComponents,
+  selectComponents,
+  layoutComponents,
+  formConf
+} from '@/utils/generator/config';
 import { beautifierConf, titleCase } from '@/utils/generator/index';
 import { makeUpHtml, vueTemplate, vueScript, cssStyle } from '@/utils/generator/html';
 import { makeUpJs } from '@/utils/generator/js';
@@ -148,11 +172,16 @@ const labelWidth = ref(100);
 const drawingList = ref([...drawingDefault]);
 const drawingData = reactive({});
 const activeId = ref(drawingDefault[0].formId);
-const formData = reactive({});
+const formData = reactive({
+  fields: null
+});
 const dialogVisible = ref(false);
 const generateConf = ref(null);
 const showFileName = ref(false);
 const activeData = reactive({ ...drawingDefault[0] });
+
+// 额外的响应式变量
+const operationType = ref('');
 
 // 监听 activeData.label 变化，做 placeholder 相关处理
 watch(
@@ -164,7 +193,6 @@ watch(
     activeData.placeholder = activeData.placeholder.replace(oldVal, '') + val;
   }
 );
-
 // 监听 activeId 变化
 watch(
   activeId,
@@ -186,6 +214,7 @@ function activeFormItem(element) {
 }
 
 function onEnd(obj) {
+  console.log(obj, '拖拽结束');
   if (obj.from !== obj.to) {
     Object.assign(activeData, tempActiveData);
     activeId.value = idGlobal.value;
@@ -212,6 +241,7 @@ function cloneComponent(origin) {
 }
 
 function addComponent(item) {
+  console.log(item, '添加');
   const clone = cloneComponent(item);
   drawingList.value.push(clone);
   activeFormItem(clone);
@@ -222,12 +252,12 @@ function AssembleFormData() {
   Object.assign(formData, formConfRef);
 }
 
+// 选择生成类型
 function generate(data) {
   const func = execMethods[`exec${titleCase(data.type)}`];
   generateConf.value = data;
   if (func) func(data);
 }
-
 const execMethods = {
   execDownload(data) {
     const codeStr = generateCode();
@@ -238,12 +268,10 @@ const execMethods = {
   },
   execCopy() {
     document.getElementById('copyNode').click();
-  },
-  execRun() {
-    // 你之前没写这个，按需补充
   }
 };
 
+// 清空试图
 function empty() {
   if (confirm('确定要清空所有组件吗？')) {
     drawingList.value = [];
@@ -352,68 +380,9 @@ onMounted(() => {
     alert('代码复制失败');
   });
 });
-
-// 额外的响应式变量
-const operationType = ref('');
 </script>
 
 <style lang="scss">
-.container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-.left-board {
-  width: 260px;
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100vh;
-}
-.logo-wrapper {
-  position: relative;
-  height: 42px;
-  background: #fff;
-  border-bottom: 1px solid #f1e8e8;
-  box-sizing: border-box;
-}
-.logo {
-  position: absolute;
-  left: 12px;
-  top: 6px;
-  line-height: 30px;
-  color: #00afff;
-  font-weight: 600;
-  font-size: 17px;
-  white-space: nowrap;
-  > img {
-    width: 30px;
-    height: 30px;
-    vertical-align: top;
-  }
-  .github {
-    display: inline-block;
-    vertical-align: sub;
-    margin-left: 15px;
-    > img {
-      height: 22px;
-    }
-  }
-}
-
-.left-scrollbar {
-  height: calc(100vh - 42px);
-  overflow: hidden;
-}
-.left-scrollbar .el-scrollbar__wrap {
-  box-sizing: border-box;
-  overflow-x: hidden !important;
-  margin-bottom: 0 !important;
-}
-.left-scrollbar .el-scrollbar__view {
-  overflow-x: hidden;
-}
-
 .editor-tabs {
   background: #121315;
   .el-tabs__header {
@@ -451,7 +420,11 @@ const operationType = ref('');
     padding: 12px 18px 15px 15px;
   }
 }
-
+.left-scrollbar .el-scrollbar__wrap {
+  box-sizing: border-box;
+  overflow-x: hidden !important;
+  margin-bottom: 0 !important;
+}
 .center-tabs {
   .el-tabs__header {
     margin-bottom: 0 !important;
@@ -493,9 +466,6 @@ const operationType = ref('');
   }
 }
 .action-bar {
-  & .el-button {
-    margin-top: 12px;
-  }
   & .el-button + .el-button {
     margin-left: 15px;
   }
@@ -524,6 +494,10 @@ const operationType = ref('');
   }
 }
 
+.left-scrollbar .el-scrollbar__view {
+  overflow-x: hidden;
+}
+
 .el-rate {
   display: inline-block;
   vertical-align: text-top;
@@ -534,6 +508,12 @@ const operationType = ref('');
 
 $selectedColor: #f6f7ff;
 $lighterBlue: #409eff;
+
+.container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 
 .components-list {
   padding: 8px;
@@ -579,6 +559,17 @@ $lighterBlue: #409eff;
   }
 }
 
+.left-board {
+  width: 260px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100vh;
+}
+.left-scrollbar {
+  height: calc(100vh - 42px);
+  overflow: hidden;
+}
 .center-scrollbar {
   height: calc(100vh - 42px);
   overflow: hidden;
@@ -611,7 +602,39 @@ $lighterBlue: #409eff;
   border: 1px solid #f1e8e8;
   border-top: none;
   border-left: none;
-  color: $lighterBlue;
+  .delete-btn {
+    color: #f56c6c;
+  }
+}
+.logo-wrapper {
+  position: relative;
+  height: 42px;
+  background: #fff;
+  border-bottom: 1px solid #f1e8e8;
+  box-sizing: border-box;
+}
+.logo {
+  position: absolute;
+  left: 12px;
+  top: 6px;
+  line-height: 30px;
+  color: #00afff;
+  font-weight: 600;
+  font-size: 17px;
+  white-space: nowrap;
+  > img {
+    width: 30px;
+    height: 30px;
+    vertical-align: top;
+  }
+  .github {
+    display: inline-block;
+    vertical-align: sub;
+    margin-left: 15px;
+    > img {
+      height: 22px;
+    }
+  }
 }
 
 .center-board-row {
@@ -731,9 +754,8 @@ $lighterBlue: #409eff;
     height: 22px;
     line-height: 22px;
     text-align: center;
-    border-radius: 50%;
+    border-radius: 6px;
     font-size: 12px;
-    border: 1px solid;
     cursor: pointer;
     z-index: 1;
   }

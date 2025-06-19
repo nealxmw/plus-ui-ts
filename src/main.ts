@@ -38,6 +38,8 @@ VXETable.config({
   zIndex: 999999
 });
 
+import ElementPlus from 'element-plus';
+import 'element-plus/dist/index.css';
 // 修改 el-dialog 默认点击遮照为不关闭
 import { ElDialog } from 'element-plus';
 ElDialog.props.closeOnClickModal.default = false;
@@ -46,6 +48,7 @@ const app = createApp(App);
 
 app.use(HighLight);
 app.use(ElementIcons);
+app.use(ElementPlus);
 app.use(router);
 app.use(store);
 app.use(i18n);

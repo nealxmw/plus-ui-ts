@@ -1,111 +1,51 @@
 import { trigger } from './config';
 
-// 定义类型接口
+interface FormElement {
+  tag: string;
+  vModel: string;
+  label?: string;
+  span?: number;
+  labelWidth?: number;
+  required?: boolean;
+  layout?: string;
+  type?: string;
+  justify?: string;
+  align?: string;
+  gutter?: number;
+  disabled?: boolean;
+  clearable?: boolean;
+  placeholder?: string;
+  options?: Array<{ label: string; value: any; disabled?: boolean }>;
+  style?: { width?: string };
+  children?: FormElement[];
+  [key: string]: any;
+}
+
 interface FormConfig {
   formRef: string;
   formModel: string;
   formRules: string;
   size: string;
-  disabled?: boolean;
+  labelPosition: string;
   labelWidth: number;
-  labelPosition?: string;
-  gutter?: number;
-  formBtns?: boolean;
-  fields: FormField[];
+  gutter: number;
+  disabled: boolean;
+  formBtns: boolean;
+  fields: FormElement[];
+  unFocusedComponentBorder?: boolean;
+  [key: string]: any;
 }
 
-interface FormField {
-  layout: string;
-  tag: string;
-  label?: string;
-  vModel: string;
-  span: number;
-  required?: boolean;
-  disabled?: boolean;
-  labelWidth?: number;
-  type?: string;
-  justify?: string;
-  align?: string;
-  gutter?: number;
-  children?: FormField[];
-  options?: any[];
-  optionType?: string;
-  border?: boolean;
-  clearable?: boolean;
-  placeholder?: string;
-  style?: { width?: string };
-  maxlength?: number;
-  'show-word-limit'?: boolean;
-  readonly?: boolean;
-  prepend?: string;
-  append?: string;
-  'prefix-icon'?: string;
-  'suffix-icon'?: string;
-  'show-password'?: boolean;
-  autosize?: { minRows?: number; maxRows?: number };
-  'controls-position'?: string;
-  min?: number;
-  max?: number;
-  step?: number;
-  'step-strictly'?: boolean;
-  precision?: number;
-  filterable?: boolean;
-  multiple?: boolean;
-  'active-text'?: string;
-  'inactive-text'?: string;
-  'active-color'?: string;
-  'inactive-color'?: string;
-  'active-value'?: any;
-  'inactive-value'?: any;
-  props?: any;
-  'show-all-levels'?: boolean;
-  separator?: string;
-  range?: boolean;
-  'show-stops'?: boolean;
-  'start-placeholder'?: string;
-  'end-placeholder'?: string;
-  'range-separator'?: string;
-  'is-range'?: boolean;
-  format?: string;
-  'value-format'?: string;
-  'picker-options'?: any;
-  'allow-half'?: boolean;
-  'show-text'?: boolean;
-  'show-score'?: boolean;
-  'show-alpha'?: boolean;
-  'color-format'?: string;
-  action?: string;
-  'list-type'?: string;
-  accept?: string;
-  name?: string;
-  'auto-upload'?: boolean;
-  default?: string;
-  buttonText?: string;
-  showTip?: boolean;
-  fileSize?: number;
-  sizeUnit?: string;
-}
-
-interface AttrBuilderResult {
-  vModel: string;
-  clearable?: string;
-  placeholder?: string;
-  width?: string;
-  disabled?: string;
-}
-
-// 全局变量
 let confGlobal: FormConfig | null = null;
 let someSpanIsNot24: boolean = false;
 
-// 辅助函数
 export function dialogWrapper(str: string): string {
-  return `<el-dialog v-bind="$attrs" v-on="$listeners" @open="onOpen" @close="onClose" title="Dialog Title">
+  return `<el-dialog v-bind="$attrs" @open="onOpen" @close="onClose" title="Dialog Title">
     ${str}
-    <div slot="footer">
+    <template #footer>
       <el-button @click="close">取消</el-button>
       <el-button type="primary" @click="handleConfirm">确定</el-button>
-    </div>
+    </template>
   </el-dialog>`;
 }
 
@@ -118,13 +58,13 @@ export function vueTemplate(str: string): string {
 }
 
 export function vueScript(str: string): string {
-  return `<script>
+  return `<script lang="ts">
     ${str}
   </script>`;
 }
 
 export function cssStyle(cssStr: string): string {
-  return `<style>
+  return `<style scoped>
     ${cssStr}
   </style>`;
 }
@@ -140,7 +80,7 @@ function buildFormTemplate(conf: FormConfig, child: string, type: string): strin
       ${buildFromBtns(conf, type)}
     </el-form>`;
   if (someSpanIsNot24) {
-    str = `<el-row :gutter="${conf.gutter || 20}">
+    str = `<el-row :gutter="${conf.gutter}">
         ${str}
       </el-row>`;
   }
@@ -163,7 +103,7 @@ function buildFromBtns(conf: FormConfig, type: string): string {
   return str;
 }
 
-function colWrapper(element: FormField, str: string): string {
+function colWrapper(element: FormElement, str: string): string {
   if (someSpanIsNot24 || element.span !== 24) {
     return `<el-col :span="${element.span}">
       ${str}
@@ -172,27 +112,26 @@ function colWrapper(element: FormField, str: string): string {
   return str;
 }
 
-// 布局构建器
-const layouts: Record<string, (element: FormField) => string> = {
-  colFormItem(element: FormField): string {
+const layouts = {
+  colFormItem(element: FormElement): string {
     let labelWidth = '';
     if (element.labelWidth && element.labelWidth !== confGlobal?.labelWidth) {
       labelWidth = `label-width="${element.labelWidth}px"`;
     }
-    const required = !trigger[element.tag] && element.required ? 'required' : '';
-    const tagDom = tags[element.tag] ? tags[element.tag](element) : '';
+    const required = !trigger[element.tag as keyof typeof trigger] && element.required ? 'required' : '';
+    const tagDom = tags[element.tag as keyof typeof tags] ? tags[element.tag as keyof typeof tags](element) : null;
     let str = `<el-form-item ${labelWidth} label="${element.label}" prop="${element.vModel}" ${required}>
         ${tagDom}
       </el-form-item>`;
     str = colWrapper(element, str);
     return str;
   },
-  rowFormItem(element: FormField): string {
+  rowFormItem(element: FormElement): string {
     const type = element.type === 'default' ? '' : `type="${element.type}"`;
     const justify = element.type === 'default' ? '' : `justify="${element.justify}"`;
     const align = element.type === 'default' ? '' : `align="${element.align}"`;
     const gutter = element.gutter ? `gutter="${element.gutter}"` : '';
-    const children = element.children?.map((el) => layouts[el.layout](el)).join('\n') || '';
+    const children = element.children?.map((el) => layouts[el.layout as keyof typeof layouts](el)).join('\n') || '';
     let str = `<el-row ${type} ${justify} ${align} ${gutter}>
       ${children}
     </el-row>`;
@@ -201,9 +140,8 @@ const layouts: Record<string, (element: FormField) => string> = {
   }
 };
 
-// 标签构建器
-const tags: Record<string, (el: FormField) => string> = {
-  'el-button': (el: FormField): string => {
+const tags = {
+  'el-button': (el: FormElement): string => {
     const { tag, disabled } = attrBuilder(el);
     const type = el.type ? `type="${el.type}"` : '';
     const icon = el.icon ? `icon="${el.icon}"` : '';
@@ -213,7 +151,7 @@ const tags: Record<string, (el: FormField) => string> = {
     if (child) child = `\n${child}\n`;
     return `<${el.tag} ${type} ${icon} ${size} ${disabled}>${child}</${el.tag}>`;
   },
-  'el-input': (el: FormField): string => {
+  'el-input': (el: FormElement): string => {
     const { disabled, vModel, clearable, placeholder, width } = attrBuilder(el);
     const maxlength = el.maxlength ? `:maxlength="${el.maxlength}"` : '';
     const showWordLimit = el['show-word-limit'] ? 'show-word-limit' : '';
@@ -228,7 +166,7 @@ const tags: Record<string, (el: FormField) => string> = {
     if (child) child = `\n${child}\n`;
     return `<${el.tag} ${vModel} ${type} ${placeholder} ${maxlength} ${showWordLimit} ${readonly} ${disabled} ${clearable} ${prefixIcon} ${suffixIcon} ${showPassword} ${autosize} ${width}>${child}</${el.tag}>`;
   },
-  'el-input-number': (el: FormField): string => {
+  'el-input-number': (el: FormElement): string => {
     const { disabled, vModel, placeholder } = attrBuilder(el);
     const controlsPosition = el['controls-position'] ? `controls-position=${el['controls-position']}` : '';
     const min = el.min ? `:min='${el.min}'` : '';
@@ -239,7 +177,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${vModel} ${placeholder} ${step} ${stepStrictly} ${precision} ${controlsPosition} ${min} ${max} ${disabled}></${el.tag}>`;
   },
-  'el-select': (el: FormField): string => {
+  'el-select': (el: FormElement): string => {
     const { disabled, vModel, clearable, placeholder, width } = attrBuilder(el);
     const filterable = el.filterable ? 'filterable' : '';
     const multiple = el.multiple ? 'multiple' : '';
@@ -248,7 +186,7 @@ const tags: Record<string, (el: FormField) => string> = {
     if (child) child = `\n${child}\n`;
     return `<${el.tag} ${vModel} ${placeholder} ${disabled} ${multiple} ${filterable} ${clearable} ${width}>${child}</${el.tag}>`;
   },
-  'el-radio-group': (el: FormField): string => {
+  'el-radio-group': (el: FormElement): string => {
     const { disabled, vModel } = attrBuilder(el);
     const size = `size="${el.size}"`;
     let child = buildElRadioGroupChild(el);
@@ -256,7 +194,7 @@ const tags: Record<string, (el: FormField) => string> = {
     if (child) child = `\n${child}\n`;
     return `<${el.tag} ${vModel} ${size} ${disabled}>${child}</${el.tag}>`;
   },
-  'el-checkbox-group': (el: FormField): string => {
+  'el-checkbox-group': (el: FormElement): string => {
     const { disabled, vModel } = attrBuilder(el);
     const size = `size="${el.size}"`;
     const min = el.min ? `:min="${el.min}"` : '';
@@ -266,7 +204,7 @@ const tags: Record<string, (el: FormField) => string> = {
     if (child) child = `\n${child}\n`;
     return `<${el.tag} ${vModel} ${min} ${max} ${size} ${disabled}>${child}</${el.tag}>`;
   },
-  'el-switch': (el: FormField): string => {
+  'el-switch': (el: FormElement): string => {
     const { disabled, vModel } = attrBuilder(el);
     const activeText = el['active-text'] ? `active-text="${el['active-text']}"` : '';
     const inactiveText = el['inactive-text'] ? `inactive-text="${el['inactive-text']}"` : '';
@@ -277,7 +215,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${vModel} ${activeText} ${inactiveText} ${activeColor} ${inactiveColor} ${activeValue} ${inactiveValue} ${disabled}></${el.tag}>`;
   },
-  'el-cascader': (el: FormField): string => {
+  'el-cascader': (el: FormElement): string => {
     const { disabled, vModel, clearable, placeholder, width } = attrBuilder(el);
     const options = el.options ? `:options="${el.vModel}Options"` : '';
     const props = el.props ? `:props="${el.vModel}Props"` : '';
@@ -287,7 +225,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${vModel} ${options} ${props} ${width} ${showAllLevels} ${placeholder} ${separator} ${filterable} ${clearable} ${disabled}></${el.tag}>`;
   },
-  'el-slider': (el: FormField): string => {
+  'el-slider': (el: FormElement): string => {
     const { disabled, vModel } = attrBuilder(el);
     const min = el.min ? `:min='${el.min}'` : '';
     const max = el.max ? `:max='${el.max}'` : '';
@@ -297,7 +235,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${min} ${max} ${step} ${vModel} ${range} ${showStops} ${disabled}></${el.tag}>`;
   },
-  'el-time-picker': (el: FormField): string => {
+  'el-time-picker': (el: FormElement): string => {
     const { disabled, vModel, clearable, placeholder, width } = attrBuilder(el);
     const startPlaceholder = el['start-placeholder'] ? `start-placeholder="${el['start-placeholder']}"` : '';
     const endPlaceholder = el['end-placeholder'] ? `end-placeholder="${el['end-placeholder']}"` : '';
@@ -309,7 +247,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${vModel} ${isRange} ${format} ${valueFormat} ${pickerOptions} ${width} ${placeholder} ${startPlaceholder} ${endPlaceholder} ${rangeSeparator} ${clearable} ${disabled}></${el.tag}>`;
   },
-  'el-date-picker': (el: FormField): string => {
+  'el-date-picker': (el: FormElement): string => {
     const { disabled, vModel, clearable, placeholder, width } = attrBuilder(el);
     const startPlaceholder = el['start-placeholder'] ? `start-placeholder="${el['start-placeholder']}"` : '';
     const endPlaceholder = el['end-placeholder'] ? `end-placeholder="${el['end-placeholder']}"` : '';
@@ -321,7 +259,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${type} ${vModel} ${format} ${valueFormat} ${width} ${placeholder} ${startPlaceholder} ${endPlaceholder} ${rangeSeparator} ${clearable} ${readonly} ${disabled}></${el.tag}>`;
   },
-  'el-rate': (el: FormField): string => {
+  'el-rate': (el: FormElement): string => {
     const { disabled, vModel } = attrBuilder(el);
     const max = el.max ? `:max='${el.max}'` : '';
     const allowHalf = el['allow-half'] ? 'allow-half' : '';
@@ -330,7 +268,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${vModel} ${allowHalf} ${showText} ${showScore} ${disabled}></${el.tag}>`;
   },
-  'el-color-picker': (el: FormField): string => {
+  'el-color-picker': (el: FormElement): string => {
     const { disabled, vModel } = attrBuilder(el);
     const size = `size="${el.size}"`;
     const showAlpha = el['show-alpha'] ? 'show-alpha' : '';
@@ -338,7 +276,7 @@ const tags: Record<string, (el: FormField) => string> = {
 
     return `<${el.tag} ${vModel} ${size} ${showAlpha} ${colorFormat} ${disabled}></${el.tag}>`;
   },
-  'el-upload': (el: FormField): string => {
+  'el-upload': (el: FormElement): string => {
     const disabled = el.disabled ? ":disabled='true'" : '';
     const action = el.action ? `:action="${el.vModel}Action"` : '';
     const multiple = el.multiple ? 'multiple' : '';
@@ -356,91 +294,91 @@ const tags: Record<string, (el: FormField) => string> = {
   }
 };
 
-// 属性构建器
-function attrBuilder(el: FormField): AttrBuilderResult {
-  const result: AttrBuilderResult = {
-    vModel: `v-model="${confGlobal?.formModel}.${el.vModel}"`
+function attrBuilder(el: FormElement) {
+  return {
+    vModel: `v-model="${confGlobal?.formModel}.${el.vModel}"`,
+    clearable: el.clearable ? 'clearable' : '',
+    placeholder: el.placeholder ? `placeholder="${el.placeholder}"` : '',
+    width: el.style && el.style.width ? ':style="{width: \'100%\'}"' : '',
+    disabled: el.disabled ? ":disabled='true'" : '',
+    tag: el.tag
   };
-
-  if (el.clearable) result.clearable = 'clearable';
-  if (el.placeholder) result.placeholder = `placeholder="${el.placeholder}"`;
-  if (el.style?.width) result.width = ':style="{width: \'100%\'}"';
-  if (el.disabled) result.disabled = ":disabled='true'";
-
-  return result;
 }
 
-// 构建子元素
-function buildElButtonChild(conf: FormField): string {
-  return conf.default ? conf.default : '';
-}
-
-function buildElInputChild(conf: FormField): string {
+function buildElButtonChild(conf: FormElement): string {
   const children = [];
-  if (conf.prepend) {
-    children.push(`<template slot="prepend">${conf.prepend}</template>`);
-  }
-  if (conf.append) {
-    children.push(`<template slot="append">${conf.append}</template>`);
+  if (conf.default) {
+    children.push(conf.default);
   }
   return children.join('\n');
 }
 
-function buildElSelectChild(conf: FormField): string {
-  if (conf.options?.length) {
-    return `<el-option v-for="(item, index) in ${conf.vModel}Options" :key="index" :label="item.label" :value="item.value" :disabled="item.disabled"></el-option>`;
+function buildElInputChild(conf: FormElement): string {
+  const children = [];
+  if (conf.prepend) {
+    children.push(`<template #prepend>${conf.prepend}</template>`);
   }
-  return '';
+  if (conf.append) {
+    children.push(`<template #append>${conf.append}</template>`);
+  }
+  return children.join('\n');
 }
 
-function buildElRadioGroupChild(conf: FormField): string {
-  if (conf.options?.length) {
+function buildElSelectChild(conf: FormElement): string {
+  const children = [];
+  if (conf.options && conf.options.length) {
+    children.push(
+      `<el-option v-for="(item, index) in ${conf.vModel}Options" :key="index" :label="item.label" :value="item.value" :disabled="item.disabled"></el-option>`
+    );
+  }
+  return children.join('\n');
+}
+
+function buildElRadioGroupChild(conf: FormElement): string {
+  const children = [];
+  if (conf.options && conf.options.length) {
     const tag = conf.optionType === 'button' ? 'el-radio-button' : 'el-radio';
     const border = conf.border ? 'border' : '';
-    return `<${tag} v-for="(item, index) in ${conf.vModel}Options" :key="index" :label="item.value" :disabled="item.disabled" ${border}>{{item.label}}</${tag}>`;
+    children.push(
+      `<${tag} v-for="(item, index) in ${conf.vModel}Options" :key="index" :label="item.value" :disabled="item.disabled" ${border}>{{item.label}}</${tag}>`
+    );
   }
-  return '';
+  return children.join('\n');
 }
 
-function buildElCheckboxGroupChild(conf: FormField): string {
-  if (conf.options?.length) {
+function buildElCheckboxGroupChild(conf: FormElement): string {
+  const children = [];
+  if (conf.options && conf.options.length) {
     const tag = conf.optionType === 'button' ? 'el-checkbox-button' : 'el-checkbox';
     const border = conf.border ? 'border' : '';
-    return `<${tag} v-for="(item, index) in ${conf.vModel}Options" :key="index" :label="item.value" :disabled="item.disabled" ${border}>{{item.label}}</${tag}>`;
+    children.push(
+      `<${tag} v-for="(item, index) in ${conf.vModel}Options" :key="index" :label="item.value" :disabled="item.disabled" ${border}>{{item.label}}</${tag}>`
+    );
   }
-  return '';
+  return children.join('\n');
 }
 
-function buildElUploadChild(conf: FormField): string {
+function buildElUploadChild(conf: FormElement): string {
   const list = [];
-  if (conf['list-type'] === 'picture-card') {
-    list.push('<i class="el-icon-plus"></i>');
-  } else {
-    list.push(`<el-button size="small" type="primary" icon="el-icon-upload">${conf.buttonText || '上传'}</el-button>`);
-  }
-  if (conf.showTip) {
-    list.push(`<div slot="tip" class="el-upload__tip">只能上传不超过 ${conf.fileSize}${conf.sizeUnit} 的${conf.accept}文件</div>`);
-  }
+  if (conf['list-type'] === 'picture-card') list.push('<i class="el-icon-plus"></i>');
+  else list.push(`<el-button size="small" type="primary" icon="el-icon-upload">${conf.buttonText}</el-button>`);
+  if (conf.showTip) list.push(`<div #tip class="el-upload__tip">只能上传不超过 ${conf.fileSize}${conf.sizeUnit} 的${conf.accept}文件</div>`);
   return list.join('\n');
 }
 
-// 主函数
 export function makeUpHtml(conf: FormConfig, type: string): string {
   const htmlList: string[] = [];
   confGlobal = conf;
   someSpanIsNot24 = conf.fields.some((item) => item.span !== 24);
-
   conf.fields.forEach((el) => {
-    htmlList.push(layouts[el.layout](el));
+    htmlList.push(layouts[el.layout as keyof typeof layouts](el));
   });
-
   const htmlStr = htmlList.join('\n');
-  let temp = buildFormTemplate(conf, htmlStr, type);
 
+  let temp = buildFormTemplate(conf, htmlStr, type);
   if (type === 'dialog') {
     temp = dialogWrapper(temp);
   }
-
   confGlobal = null;
   return temp;
 }

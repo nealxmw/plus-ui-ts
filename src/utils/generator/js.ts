@@ -1,61 +1,20 @@
 import { exportDefault, titleCase } from '@/utils/generator/index';
 import { trigger } from './config';
 
-interface FieldOption {
-  pattern?: string;
-  message: string;
-}
-
-interface FieldProps {
-  props: {
-    value?: string;
-    label?: string;
-    children?: string;
-    [key: string]: any;
-  };
-}
-
-interface Field {
-  vModel?: string;
-  defaultValue?: any;
-  placeholder?: string;
-  label?: string;
-  required?: boolean;
-  multiple?: boolean;
-  options?: any[];
-  dataType?: 'dynamic' | 'static';
-  tag?: string;
-  props?: FieldProps;
-  regList?: FieldOption[];
-  action?: string;
-  'auto-upload'?: boolean;
-  accept?: string;
-  fileSize?: number;
-  sizeUnit?: keyof typeof units;
-  children?: Field[];
-}
-
-interface FormConfig {
-  formModel: string;
-  formRules: string;
-  formRef: string;
-  fields: Field[];
-  formBtns?: boolean;
-}
-
-const units = {
+const units: Record<string, string> = {
   KB: '1024',
   MB: '1024 / 1024',
   GB: '1024 / 1024 / 1024'
 };
 
-let confGlobal: FormConfig;
+let confGlobal: any;
+
 const inheritAttrs: Record<string, string> = {
   file: '',
   dialog: 'inheritAttrs: false,'
 };
 
-export function makeUpJs(conf: FormConfig, type: string): string {
+export function makeUpJs(conf: any, type: string): string {
   confGlobal = conf = JSON.parse(JSON.stringify(conf));
   const dataList: string[] = [];
   const ruleList: string[] = [];
@@ -64,7 +23,7 @@ export function makeUpJs(conf: FormConfig, type: string): string {
   const methodList: string[] = mixinMethod(type);
   const uploadVarList: string[] = [];
 
-  conf.fields.forEach((el) => {
+  conf.fields.forEach((el: any) => {
     buildAttributes(el, dataList, ruleList, optionsList, methodList, propsList, uploadVarList);
   });
 
@@ -78,12 +37,12 @@ export function makeUpJs(conf: FormConfig, type: string): string {
     propsList.join('\n'),
     methodList.join('\n')
   );
-  confGlobal = null!;
+  confGlobal = null;
   return script;
 }
 
 function buildAttributes(
-  el: Field,
+  el: any,
   dataList: string[],
   ruleList: string[],
   optionsList: string[],
@@ -103,15 +62,12 @@ function buildAttributes(
     }
   }
 
-  if (el.props?.props) {
+  if (el.props && el.props.props) {
     buildProps(el, propsList);
   }
 
   if (el.action && el.tag === 'el-upload') {
-    uploadVarList.push(
-      `${el.vModel}Action: '${el.action}',
-      ${el.vModel}fileList: [],`
-    );
+    uploadVarList.push(`${el.vModel}Action: '${el.action}',\n      ${el.vModel}fileList: [],`);
     methodList.push(buildBeforeUpload(el));
     if (!el['auto-upload']) {
       methodList.push(buildSubmitUpload(el));
@@ -119,18 +75,20 @@ function buildAttributes(
   }
 
   if (el.children) {
-    el.children.forEach((child) => buildAttributes(child, dataList, ruleList, optionsList, methodList, propsList, uploadVarList));
+    el.children.forEach((el2: any) => {
+      buildAttributes(el2, dataList, ruleList, optionsList, methodList, propsList, uploadVarList);
+    });
   }
 }
 
 function mixinMethod(type: string): string[] {
   const list: string[] = [];
-  const minxins: Record<string, Record<string, string> | null> = {
+  const minxins: Record<string, any> = {
     file: confGlobal.formBtns
       ? {
           submitForm: `submitForm() {
-        this.$refs['${confGlobal.formRef}'].validate(valid => {
-          if(!valid) return
+        this.$refs['${confGlobal.formRef}'].validate((valid: boolean) => {
+          if (!valid) return
           // TODO 提交表单
         })
       },`,
@@ -148,8 +106,8 @@ function mixinMethod(type: string): string[] {
         this.$emit('update:visible', false)
       },`,
       handleConfirm: `handleConfirm() {
-        this.$refs['${confGlobal.formRef}'].validate(valid => {
-          if(!valid) return
+        this.$refs['${confGlobal.formRef}'].validate((valid: boolean) => {
+          if (!valid) return
           this.close()
         })
       },`
@@ -159,68 +117,67 @@ function mixinMethod(type: string): string[] {
   const methods = minxins[type];
   if (methods) {
     Object.keys(methods).forEach((key) => {
-      list.push(methods[key]!);
+      list.push(methods[key]);
     });
   }
 
   return list;
 }
 
-function buildData(conf: Field, dataList: string[]): void {
+function buildData(conf: any, dataList: string[]): void {
   if (conf.vModel === undefined) return;
   let defaultValue: string;
   if (typeof conf.defaultValue === 'string' && !conf.multiple) {
     defaultValue = `'${conf.defaultValue}'`;
   } else {
-    defaultValue = JSON.stringify(conf.defaultValue);
+    defaultValue = `${JSON.stringify(conf.defaultValue)}`;
   }
   dataList.push(`${conf.vModel}: ${defaultValue},`);
 }
 
-function buildRules(conf: Field, ruleList: string[]): void {
+function buildRules(conf: any, ruleList: string[]): void {
   if (conf.vModel === undefined) return;
   const rules: string[] = [];
-
-  if (trigger[conf.tag!]) {
+  if (trigger[conf.tag]) {
     if (conf.required) {
       const type = Array.isArray(conf.defaultValue) ? "type: 'array'," : '';
-      const message = Array.isArray(conf.defaultValue) ? `请至少选择一个${conf.vModel}` : conf.placeholder || `${conf.label}不能为空`;
-      rules.push(`{ required: true, ${type} message: '${message}', trigger: '${trigger[conf.tag!]}' }`);
+      let message = Array.isArray(conf.defaultValue) ? `请至少选择一个${conf.vModel}` : conf.placeholder;
+      if (message === undefined) message = `${conf.label}不能为空`;
+      rules.push(`{ required: true, ${type} message: '${message}', trigger: '${trigger[conf.tag]}' }`);
     }
-
-    if (Array.isArray(conf.regList)) {
-      conf.regList.forEach((item) => {
+    if (conf.regList && Array.isArray(conf.regList)) {
+      conf.regList.forEach((item: any) => {
         if (item.pattern) {
-          rules.push(`{ pattern: ${eval(item.pattern)}, message: '${item.message}', trigger: '${trigger[conf.tag!]}' }`);
+          rules.push(`{ pattern: ${eval(item.pattern)}, message: '${item.message}', trigger: '${trigger[conf.tag]}' }`);
         }
       });
     }
-
     ruleList.push(`${conf.vModel}: [${rules.join(',')}],`);
   }
 }
 
-function buildOptions(conf: Field, optionsList: string[]): void {
+function buildOptions(conf: any, optionsList: string[]): void {
   if (conf.vModel === undefined) return;
   if (conf.dataType === 'dynamic') conf.options = [];
-  optionsList.push(`${conf.vModel}Options: ${JSON.stringify(conf.options)},`);
+  const str = `${conf.vModel}Options: ${JSON.stringify(conf.options)},`;
+  optionsList.push(str);
 }
 
-function buildProps(conf: Field, propsList: string[]): void {
-  if (!conf.props) return;
+function buildProps(conf: any, propsList: string[]): void {
   if (conf.dataType === 'dynamic') {
     conf.valueKey !== 'value' && (conf.props.props.value = conf.valueKey);
     conf.labelKey !== 'label' && (conf.props.props.label = conf.labelKey);
     conf.childrenKey !== 'children' && (conf.props.props.children = conf.childrenKey);
   }
-  propsList.push(`${conf.vModel}Props: ${JSON.stringify(conf.props.props)},`);
+  const str = `${conf.vModel}Props: ${JSON.stringify(conf.props.props)},`;
+  propsList.push(str);
 }
 
-function buildBeforeUpload(conf: Field): string {
-  const unitNum = units[conf.sizeUnit!];
-  const returnList: string[] = [];
+function buildBeforeUpload(conf: any): string {
+  const unitNum = units[conf.sizeUnit];
   let rightSizeCode = '';
   let acceptCode = '';
+  const returnList: string[] = [];
 
   if (conf.fileSize) {
     rightSizeCode = `let isRightSize = file.size / ${unitNum} < ${conf.fileSize}
@@ -243,10 +200,11 @@ function buildBeforeUpload(conf: Field): string {
     ${acceptCode}
     return ${returnList.join(' && ')}
   },`;
+
   return returnList.length ? str : '';
 }
 
-function buildSubmitUpload(conf: Field): string {
+function buildSubmitUpload(conf: any): string {
   return `submitUpload() {
     this.$refs['${conf.vModel}'].submit()
   },`;
@@ -261,7 +219,7 @@ function buildOptionMethod(methodName: string, model: string, methodList: string
 }
 
 function buildexport(
-  conf: FormConfig,
+  conf: any,
   type: string,
   data: string,
   rules: string,
@@ -270,8 +228,8 @@ function buildexport(
   props: string,
   methods: string
 ): string {
-  return `${exportDefault}{
-  ${inheritAttrs[type] || ''}
+  const str = `${exportDefault}{
+  ${inheritAttrs[type]}
   components: {},
   props: [],
   data () {
@@ -295,4 +253,5 @@ function buildexport(
     ${methods}
   }
 }`;
+  return str;
 }

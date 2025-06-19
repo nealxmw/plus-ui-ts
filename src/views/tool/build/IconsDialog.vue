@@ -1,30 +1,14 @@
 <template>
   <div class="icon-dialog">
-    <el-dialog
-      v-bind="attrs"
-      width="980px"
-      :modal-append-to-body="false"
-      :model-value="modelValue"
-      @update:model-value="updateVisible"
-      @open="onOpen"
-      @close="onClose"
-    >
+    <el-dialog v-bind="$attrs" width="980px" :modal-append-to-body="false" @open="onOpen" @close="onClose">
       <template #header>
-        <div class="dialog-title">
-          选择图标
-          <el-input v-model="searchKey" size="small" :style="{ width: '260px' }" placeholder="请输入图标名称" clearable>
-            <template #prefix>
-              <el-icon><search /></el-icon>
-            </template>
-          </el-input>
-        </div>
+        选择图标
+        <el-input v-model="key" size="mini" :style="{ width: '260px' }" placeholder="请输入图标名称" prefix-icon="el-icon-search" clearable />
       </template>
 
       <ul class="icon-ul">
-        <li v-for="icon in filteredIcons" :key="icon" :class="activeIcon === icon ? 'active-item' : ''" @click="onSelect(icon)">
-          <el-icon>
-            <component :is="getIconComponent(icon)" />
-          </el-icon>
+        <li v-for="icon in iconList" :key="icon" :class="active === icon ? 'active-item' : ''" @click="onSelect(icon)">
+          <i :class="icon" />
           <div>{{ icon }}</div>
         </li>
       </ul>
@@ -33,131 +17,88 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, useAttrs } from 'vue';
-import * as ElementPlusIconsVue from '@element-plus/icons-vue';
-import { Search } from '@element-plus/icons-vue';
+import { ref, watch } from 'vue';
+import iconListJson from '@/utils/generator/icon.json';
 
-// 定义属性
-const props = defineProps({
-  modelValue: Boolean,
-  current: String
+const originList = iconListJson.map((name: string) => `el-icon-${name}`);
+
+const props = defineProps<{ current?: string | null }>();
+
+const emit = defineEmits(['select', 'update:visible']);
+
+const active = ref<string | null>(null);
+const key = ref('');
+const iconList = ref<string[]>(originList);
+
+watch(key, (val) => {
+  if (val) {
+    iconList.value = originList.filter((name) => name.includes(val));
+  } else {
+    iconList.value = originList;
+  }
 });
 
-// 定义事件
-const emit = defineEmits(['update:modelValue', 'select']);
+function onOpen() {
+  active.value = props.current ?? null;
+  key.value = '';
+}
 
-// 获取非属性特性
-const attrs = useAttrs();
+function onClose() {
+  // 这里你可以根据需求处理关闭逻辑
+}
 
-// 图标数据
-const iconList = Object.keys(ElementPlusIconsVue).map((name) => name);
-
-// 响应式状态
-const activeIcon = ref('');
-const searchKey = ref('');
-const filteredIcons = computed(() => {
-  if (!searchKey.value) return iconList;
-  return iconList.filter((name) => name.toLowerCase().includes(searchKey.value.toLowerCase()));
-});
-
-// 获取图标组件
-const getIconComponent = (iconName: string) => {
-  return ElementPlusIconsVue[iconName as keyof typeof ElementPlusIconsVue];
-};
-
-// 打开对话框时的处理
-const onOpen = () => {
-  activeIcon.value = props.current || '';
-  searchKey.value = '';
-};
-
-// 关闭对话框时的处理
-const onClose = () => {
-  // 可以添加清理逻辑
-};
-
-// 选择图标
-const onSelect = (icon: string) => {
-  activeIcon.value = icon;
+function onSelect(icon: string) {
+  active.value = icon;
   emit('select', icon);
-  emit('update:modelValue', false);
-};
-
-// 更新可见状态
-const updateVisible = (value: boolean) => {
-  emit('update:modelValue', value);
-};
+  emit('update:visible', false);
+}
 </script>
 
 <style lang="scss" scoped>
 .icon-ul {
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
-
+  font-size: 0;
   li {
     list-style-type: none;
     text-align: center;
     font-size: 14px;
-    padding: 15px 6px 6px;
+    display: inline-block;
+    width: 16.66%;
+    box-sizing: border-box;
+    height: 108px;
+    padding: 15px 6px 6px 6px;
     cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.3s;
     overflow: hidden;
-
     &:hover {
-      background: #f5f7fa;
-      transform: translateY(-2px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background: #f2f2f2;
     }
-
     &.active-item {
-      background: #ecf5ff;
-      color: #409eff;
-      border: 1px solid #409eff;
+      background: #e1f3fb;
+      color: #7a6df0;
     }
-
-    .el-icon {
-      font-size: 24px;
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    div {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    > i {
+      font-size: 30px;
+      line-height: 50px;
     }
   }
 }
-
 .icon-dialog {
-  .dialog-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-right: 20px;
-  }
-
-  :deep(.el-dialog) {
+  ::v-deep .el-dialog {
     border-radius: 8px;
-    margin-top: 5vh !important;
+    margin-bottom: 0;
+    margin-top: 4vh !important;
     display: flex;
     flex-direction: column;
-    max-height: 85vh;
+    max-height: 92vh;
     overflow: hidden;
     box-sizing: border-box;
-
     .el-dialog__header {
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
+      padding-top: 14px;
     }
-
     .el-dialog__body {
-      margin: 0 20px 20px;
-      padding: 15px 0 0;
+      margin: 0 20px 20px 20px;
+      padding: 0;
       overflow: auto;
     }
   }
