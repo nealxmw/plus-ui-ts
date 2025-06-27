@@ -52,6 +52,14 @@ export const constantRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/register.vue'),
     hidden: true
   },
+
+  // 本地测试
+  {
+    path: '/build',
+    component: () => import('@/views/tool/build/index.vue'),
+    hidden: true
+  },
+
   {
     path: '/:pathMatch(.*)*',
     component: () => import('@/views/error/404.vue'),
