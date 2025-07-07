@@ -9,7 +9,8 @@
     "jsxFactory": "h",
     "jsxImportSource": "vue", // 告诉 TS 使用 Vue 的 JSX 类型
     "types": [
-      "vue"
+      "vue",
+      "vite/client"
     ], // 添加 Vue 的类型支持（有些环境需要显式添加）
     "strictNullChecks": false,
     "sourceMap": true,
@@ -29,9 +30,6 @@
         "src/*"
       ]
     },
-    "types": [
-      "vite/client"
-    ],
     "skipLibCheck": true,
     "removeComments": true,
     // 允许默认导入

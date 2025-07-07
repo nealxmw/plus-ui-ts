@@ -1,5 +1,4 @@
 import vue from '@vitejs/plugin-vue';
-import vueJsx from '@vitejs/plugin-vue-jsx'
 import createUnoCss from './unocss';
 import createAutoImport from './auto-import';
 import createComponents from './components';
@@ -12,7 +11,6 @@ import path from 'path';
 export default (viteEnv: any, isBuild = false): [] => {
   const vitePlugins: any = [];
   vitePlugins.push(vue());
-  vitePlugins.push(vueJsx());
   vitePlugins.push(createUnoCss());
   vitePlugins.push(createAutoImport(path));
   vitePlugins.push(createComponents(path));

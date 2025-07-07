@@ -12,8 +12,7 @@ export default defineConfig(({ mode, command }: ConfigEnv): UserConfig => {
     resolve: {
       alias: {
         '~': path.resolve(__dirname, './'),
-        '@': path.resolve(__dirname, './src'),
-        'vue': 'vue/dist/vue.esm-bundler.js' // 带编译器的完整版
+        '@': path.resolve(__dirname, './src')
       },
       extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.vue']
     },

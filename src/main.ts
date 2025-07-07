@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import FcDesigner from '@form-create/designer';
 // global css
 import 'virtual:uno.css';
 import '@/assets/styles/index.scss';
@@ -45,6 +46,9 @@ import { ElDialog } from 'element-plus';
 ElDialog.props.closeOnClickModal.default = false;
 
 const app = createApp(App);
+// 表单构建
+app.use(FcDesigner);
+app.use(FcDesigner.formCreate);
 
 app.use(HighLight);
 app.use(ElementIcons);
